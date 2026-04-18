@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  app:
+    image: php:8.2-cli
+    container_name: service-app-php
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    ports:
+      - "8000:8000"
+    command: >
+      bash -c "apt-get update && apt-get install -y libpq-dev git unzip
+      && docker-php-ext-install pdo pdo_pgsql
+      && php artisan serve --host=0.0.0.0 --port=8000"
+    depends_on:
+      - pgsql
+    networks:
+      - service_network
+
+  frontend:
+    image: oven/bun:latest
+    container_name: service-app-bun
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    command: >
+      bash -c "bun install && bun run dev --host 0.0.0.0"
+    networks:
+      - service_network
+
+  pgsql:
+    image: postgres:15
+    container_name: service-app-pgsql
+    environment:
+      POSTGRES_DB: service_app
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: P@ssw0rd123
+    ports:
+      - "5432:5432"
+    volumes:
+      - service-app-pgsql-data:/var/lib/postgresql/data
+    networks:
+      - service_network
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: service-app-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - service_network
+
+volumes:
+  service-app-pgsql-data:
+
+networks:
+  service_network:
+    driver: bridge
